@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DLC Bot - Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  body {
+    margin: 0; padding: 20px;
+    font-family: 'Orbitron', sans-serif;
+    background: #0a0a1e;
+    color: #00ffe1;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    text-shadow: 0 0 8px #00ffe1;
+  }
+  #searchInput {
+    display: block;
+    width: 100%;
+    max-width: 650px;
+    margin: 0 auto 20px auto;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #00ffe1;
+    background: #121233;
+    color: #00ffe1;
+    outline: none;
+  }
+  #searchInput::placeholder {
+    color: #44fffcc7;
+  }
+  #chatList {
+    max-width: 650px;
+    margin: 0 auto;
+    max-height: 75vh;
+    overflow-y: auto;
+    border: 2px solid #00ffe1;
+    border-radius: 10px;
+    background: #121233;
+    box-shadow: 0 0 20px #00ffe1aa;
+  }
+  .chat-entry {
+    padding: 15px 20px;
+    border-bottom: 1px solid #00ffe144;
+  }
+  .chat-entry:last-child {
+    border-bottom: none;
+  }
+  .question {
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+  .answer {
+    font-weight: 400;
+    margin-bottom: 5px;
+  }
+  .timestamp {
+    font-size: 0.8rem;
+    color: #44fffcc7;
+    font-style: italic;
+  }
+  .no-data {
+    text-align: center;
+    padding: 20px;
+    color: #007766;
+  }
+  /* Scrollbar styling */
+  #chatList::-webkit-scrollbar {
+    width: 8px;
+  }
+  #chatList::-webkit-scrollbar-track {
+    background: #0a0a1e;
+  }
+  #chatList::-webkit-scrollbar-thumb {
+    background: #00ffe1aa;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+  <h1>DLC Bot - Chat Logs Dashboard</h1>
+  <input id="searchInput" type="search" placeholder="Search questions..." aria-label="Search chats" />
+
+  <div id="chatList" aria-live="polite" aria-relevant="additions"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // Paste your Firebase config here (same as chatbot.html)
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const chatList = document.getElementById('chatList');
+    const searchInput = document.getElementById('searchInput');
+    let chatsData = [];
+
+    function formatTimestamp(timestamp) {
+      if (!timestamp) return 'Unknown time';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleString();
+    }
+
+    // Render chats to the DOM
+    function renderChats(data) {
+      if (!data.length) {
+        chatList.innerHTML = '<div class="no-data">No chat messages found.</div>';
+        return;
+      }
+      chatList.innerHTML = data.map(chat => `
+        <div class="chat-entry">
+          <div class="question"><strong>Q:</strong> ${chat.question}</div>
+          <div class="answer"><strong>A:</strong> ${chat.answer}</div>
+          <div class="timestamp">${formatTimestamp(chat.timestamp)}</div>
+        </div>
+      `).join('');
+    }
+
+    // Fetch chats from Firestore
+    async function fetchChats() {
+      try {
+        const snapshot = await db.collection('chats').orderBy('timestamp', 'desc').get();
+        chatsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        renderChats(chatsData);
+      } catch (err) {
+        chatList.innerHTML = `<div class="no-data">Error loading chats: ${err.message}</div>`;
+      }
+    }
+
+    // Search filter
+    searchInput.addEventListener('input', () => {
+      const query = searchInput.value.trim().toLowerCase();
+      if (!query) {
+        renderChats(chatsData);
+        return;
+      }
+      const filtered = chatsData.filter(chat =>
+        chat.question.toLowerCase().includes(query) ||
+        chat.answer.toLowerCase().includes(query)
+      );
+      renderChats(filtered);
+    });
+
+    // Initial fetch
+    fetchChats();
+  </script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DLC Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0a0026, #330066);
+      color: #fff;
+      overflow-x: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chatbot-container {
+      width: 95vw;
+      max-width: 650px;
+      height: 90vh; /* maximize height to fill most viewport */
+      background: rgba(20, 20, 50, 0.95);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 4px solid #00ffe1;
+      box-shadow: 0 0 20px #00ffe1aa;
+    }
+    
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 12px 15px 10px;
+      background: rgba(0, 255, 255, 0.15);
+      border-bottom: 3px solid #00ffe1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    
+    .robot-icon {
+      width: 45px;
+      height: 45px;
+      margin: 0;
+      filter: drop-shadow(0 0 2px #00ffe1);
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-weight: 600;
+      font-size: 1.4rem;
+      letter-spacing: 1px;
+      color: #00ffe1;
+    }
+    
+    .header p {
+      margin: 0;
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: #a0f0f7cc;
+    }
+
+    /* FAQ Buttons - horizontal scroll container above chat */
+    .faq-buttons {
+      display: flex;
+      overflow-x: auto;
+      padding: 8px 10px;
+      gap: 10px;
+      border-bottom: 2px solid #00ffe1;
+      background: rgba(0,0,0,0.12);
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none;  /* IE 10+ */
+      flex-shrink: 0;
+    }
+    .faq-buttons::-webkit-scrollbar {
+      display: none; /* Chrome, Safari */
+    }
+    .faq-buttons button {
+      flex: 0 0 auto;
+      padding: 8px 16px;
+      border-radius: 14px;
+      background: #00ffe1;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      color: #000;
+      font-weight: 600;
+      transition: background 0.3s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    
+    .faq-buttons button:hover {
+      background: #00ccaa;
+      color: #fff;
+    }
+    
+    /* Chat Window */
+    .chat-window {
+      flex: 1;
+      padding: 12px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scrollbar-width: thin;
+      scrollbar-color: #00ffe1 transparent;
+    }
+    .chat-window::-webkit-scrollbar {
+      width: 8px;
+    }
+    .chat-window::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .chat-window::-webkit-scrollbar-thumb {
+      background-color: #00ffe1;
+      border-radius: 20px;
+      border: 2px solid transparent;
+    }
+    
+    /* Input Box */
+    .input-box {
+      display: flex;
+      padding: 14px 16px;
+      background: #1a1a40;
+      border-top: 3px solid #00ffe1;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    
+    .input-box input {
+      flex: 1;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: none;
+      background: #2b2b60;
+      color: white;
+      font-size: 16px;
+      outline-offset: 2px;
+      outline-color: #00ffe1;
+    }
+    
+    .input-box input::placeholder {
+      color: #bbb;
+    }
+    
+    .input-box button {
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      flex-shrink: 0;
+      min-width: 75px;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
+    
+    #send-btn {
+      background: #00ffe1;
+    }
+    
+    #send-btn:hover {
+      background: #00ccaa;
+    }
+    
+    #voice-btn {
+      background: #ff9900;
+    }
+    
+    #voice-btn:hover {
+      background: #ff6600;
+    }
+    
+    /* Chat Messages */
+    .message {
+      padding: 14px 20px;
+      border-radius: 22px;
+      max-width: 80%;
+      font-size: 16px;
+      display: inline-block;
+      border: 2px solid #00ffe1;
+      white-space: pre-line;
+      line-height: 1.3;
+      user-select: text;
+      word-wrap: break-word;
+    }
+    
+    .bot {
+      background: rgba(0, 255, 255, 0.3);
+      align-self: flex-start;
+      color: #00ffe1;
+    }
+    
+    .user {
+      background: rgba(255, 255, 255, 0.3);
+      align-self: flex-end;
+      color: #fff;
+    }
+
+    @media (max-width: 640px) {
+      .chatbot-container {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+      }
+      .faq-buttons {
+        padding: 6px 8px;
+      }
+      .faq-buttons button {
+        font-size: 13px;
+        padding: 7px 14px;
+      }
+      .input-box input {
+        font-size: 15px;
+      }
+      .input-box button {
+        font-size: 15px;
+        min-width: 60px;
+        padding: 12px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chatbot-container" role="main" aria-label="Chatbot conversation container">
+    <div class="header">
+      <img src="https://cdn-icons-png.flaticon.com/512/4712/4712100.png" class="robot-icon" alt="Robot Icon" />
+      <h1>DLC Bot</h1>
+      <p>Unlock the Digital World – Your Guide to Tech!</p>
+    </div>
+
+    <nav class="faq-buttons" role="navigation" aria-label="Frequently Asked Questions buttons">
+      <button onclick="quickAsk('telegram')" aria-label="Ask about Telegram">Telegram</button>
+      <button onclick="quickAsk('instagram')" aria-label="Ask about Instagram">Instagram</button>
+      <button onclick="quickAsk('linkedin')" aria-label="Ask about LinkedIn">LinkedIn</button>
+      <button onclick="quickAsk('twitter')" aria-label="Ask about Twitter">Twitter</button>
+      <button onclick="quickAsk('google maps')" aria-label="Ask about Google Maps">Google Maps</button>
+      <button onclick="quickAsk('phonepe')" aria-label="Ask about PhonePe">PhonePe</button>
+      <button onclick="quickAsk('google pay')" aria-label="Ask about Google Pay">Google Pay</button>
+      <button onclick="quickAsk('google meet')" aria-label="Ask about Google Meet">Google Meet</button>
+      <button onclick="quickAsk('whatsapp')" aria-label="Ask about WhatsApp">WhatsApp</button>
+      <button onclick="quickAsk('whatsapp usage')" aria-label="Ask about WhatsApp Usage">WhatsApp Usage</button>
+      <button onclick="quickAsk('whatsapp settings')" aria-label="Ask about WhatsApp Settings">WhatsApp Settings</button>
+      <button onclick="quickAsk('whatsapp privacy')" aria-label="Ask about WhatsApp Privacy">WhatsApp Privacy</button>
+    </nav>
+
+    <div class="chat-window" id="chat-window" aria-live="polite" aria-atomic="false" aria-relevant="additions"></div>
+
+    <div class="input-box">
+      <input type="text" id="user-input" placeholder="Ask me anything..." autocomplete="off" aria-label="User input"/>
+      <button id="send-btn" onclick="sendMessage()" aria-label="Send message">Send</button>
+      <button id="voice-btn" onclick="startSpeechRecognition()" aria-label="Start voice input">🎤 Speak</button>
+    </div>
+  </div>
+
+  <script>
+    const faqMap = {
+      "telegram": "✈ Telegram Guide:\nOpen Telegram → Search contacts → Send messages, photos, and files.",
+      "instagram": "📸 Instagram Guide:\nOpen Instagram → Tap '+' → Upload → Share!",
+      "linkedin": "💼 LinkedIn Guide:\nOpen LinkedIn → Update profile → Connect with professionals.",
+      "twitter": "🐦 Twitter Guide:\nOpen Twitter → Write tweet → Post!",
+      "google maps": "🗺 Google Maps Guide:\nOpen → Enter destination → Tap 'Directions' → Navigate.",
+      "phonepe": "📱 PhonePe Guide:\nOpen PhonePe → Select 'Send' or 'Recharge' → Enter details → Confirm payment.",
+      "google pay": "💳 Google Pay Guide:\nOpen Google Pay → Add payment method → Send or receive money.",
+      "google meet": "🎥 Google Meet Guide:\nOpen Meet → Tap 'New Meeting' or enter code → Start call.",
+      "whatsapp": "📱 WhatsApp Guide:\nOpen WhatsApp → Chats → Select contact → Send messages, photos, videos, voice notes, and documents.",
+      "whatsapp usage": "📖 WhatsApp Usage:\n1. Start chat with a contact.\n2. Use voice notes or video calls.\n3. Create groups for multiple contacts.\n4. Share status updates with friends.",
+      "whatsapp settings": "⚙️ WhatsApp Settings:\nOpen Settings → Profile → Privacy → Notifications → Data usage → Customize your app preferences.",
+      "whatsapp privacy": "🔒 WhatsApp Privacy:\nControl who sees your last seen, profile photo, about, status.\nEnable two-step verification for extra security.",
+    };
+
+    function addMessage(type, text) {
+      const chatWindow = document.getElementById("chat-window");
+      const msg = document.createElement("div");
+      msg.className = `message ${type}`;
+      msg.textContent = text;
+      chatWindow.appendChild(msg);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("user-input");
+      const userTextRaw = input.value.trim();
+      const userText = userTextRaw.toLowerCase();
+      if (!userText) return;
+
+      addMessage("user", userTextRaw);
+      input.value = "";
+
+      const response = faqMap[userText] || "🤖 I don't know that yet! Try asking about WhatsApp, Telegram, or other digital tools.";
+      addMessage("bot", response);
+      speakResponse(response);
+    }
+
+    function quickAsk(key) {
+      document.getElementById("user-input").value = key;
+      sendMessage();
+    }
+
+    function startSpeechRecognition() {
+      if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+        alert('Speech Recognition not supported in this browser.');
+        return;
+      }
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const spokenText = event.results[0][0].transcript;
+        document.getElementById("user-input").value = spokenText;
+        sendMessage();
+      };
+
+      recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+      };
+    }
+
+    function speakResponse(text) {
+      if (!('speechSynthesis' in window)) return;
+
+      const synth = window.speechSynthesis;
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      const voices = synth.getVoices();
+      const femaleVoice = voices.find(voice =>
+        voice.lang.startsWith('en') &&
+        (voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('woman') || voice.name.toLowerCase().includes('zira') || voice.name.toLowerCase().includes('susan'))
+      );
+
+      const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
+
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+      } else if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+
+      utterance.rate = 1;
+      utterance.pitch = 1.2;
+
+      synth.speak(utterance);
+    }
+
+    window.speechSynthesis.onvoiceschanged = function() {
+      window.speechSynthesis.getVoices();
+    };
+  </script>
+
+</body>
+</html>
